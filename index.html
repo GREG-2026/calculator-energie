@@ -2,293 +2,184 @@
 <html lang="ro">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>Energy Calculator Pro</title>
-
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Monitor Energie PRO v2.1</title>
 <style>
-:root{
---bg:#0f172a;
---card:#1e293b;
---accent:#22c55e;
---text:#ffffff;
---input:#334155;
-}
-
-*{
-margin:0;
-padding:0;
-box-sizing:border-box;
-font-family:Segoe UI,sans-serif;
-}
-
-body{
-background:linear-gradient(135deg,#0f172a,#1e293b);
-color:var(--text);
-padding:20px;
-min-height:100vh;
-}
-
-.container{
-max-width:650px;
-margin:auto;
-}
-
-.card{
-background:rgba(255,255,255,0.08);
-backdrop-filter:blur(15px);
-border-radius:20px;
-padding:20px;
-margin-bottom:15px;
-box-shadow:0 10px 30px rgba(0,0,0,.3);
-}
-
-h1{
-text-align:center;
-margin-bottom:20px;
-font-size:28px;
-}
-
-label{
-display:block;
-margin-top:12px;
-margin-bottom:5px;
-font-weight:600;
-}
-
-input{
-width:100%;
-padding:12px;
-border:none;
-border-radius:12px;
-background:var(--input);
-color:white;
-font-size:16px;
-}
-
-button{
-width:100%;
-padding:14px;
-margin-top:15px;
-border:none;
-border-radius:12px;
-font-size:16px;
-font-weight:bold;
-cursor:pointer;
-}
-
-.calc{
-background:var(--accent);
-color:black;
-}
-
-.share{
-background:#3b82f6;
-color:white;
-}
-
-.clear{
-background:#ef4444;
-color:white;
-}
-
-.result{
-margin-top:15px;
-font-size:18px;
-line-height:1.8;
-}
-
-.value{
-color:#4ade80;
-font-weight:bold;
-}
-
-.history-item{
-background:#334155;
-padding:10px;
-border-radius:10px;
-margin-top:10px;
-font-size:14px;
-}
+body{margin:0;font-family:Arial;background:#0f172a;color:#fff}
+.header{padding:18px;text-align:center;font-size:28px;font-weight:bold;background:#111827}
+.wrap{max-width:1100px;margin:auto;padding:15px}
+.card{background:#1e293b;border-radius:18px;padding:18px;margin-bottom:15px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px}
+input,button{width:100%;padding:12px;border:none;border-radius:10px;box-sizing:border-box;margin-top:6px}
+input{background:#f8fafc}
+button{background:#22c55e;font-weight:bold}
+.stat{font-size:30px;color:#22c55e;font-weight:bold}
+.small{color:#cbd5e1}
+.hist{background:#334155;padding:10px;border-radius:10px;margin-top:8px}
+details{margin-top:8px}
 </style>
 </head>
-
 <body>
+<div class="header">⚡ Monitor Energie PRO v2.1</div>
 
-<div class="container">
+<div class="wrap">
 
 <div class="card">
-<h1>⚡ Calculator Energie</h1>
+<h2>📊 Dashboard General</h2>
+<div class="small">Ultima actualizare: <span id="lastUpdate">-</span></div><br>
+<div class="grid">
+<div>
+<b>ADMIRA</b>
+<div class="stat" id="admiraKwh">0 kWh</div>
+<div id="admiraLei">0 Lei</div>
+</div>
 
-<label>Data citire veche</label>
-<input type="date" id="dataVeche">
+<div>
+<b>BERGHOUSE</b>
+<div class="stat" id="bergKwh">0 kWh</div>
+<div id="bergLei">0 Lei</div>
+</div>
 
-<label>Index vechi (kWh)</label>
-<input type="number" id="vechi">
-
-<label>Data citire nouă</label>
-<input type="date" id="dataNoua">
-
-<label>Index nou (kWh)</label>
-<input type="number" id="nou">
-
-<label>Preț energie (Lei/kWh)</label>
-<input type="number" id="pret" value="1.3" step="0.01">
-
-<button class="calc" onclick="calculeaza()">
-Calculează
-</button>
-
-<div id="rezultat" class="result"></div>
-
-<button class="share" onclick="shareApp()">
-Distribuie aplicația
-</button>
-
+<div>
+<b>TOTAL GENERAL</b>
+<div class="stat" id="totalKwh">0 kWh</div>
+<div id="totalLei">0 Lei</div>
+</div>
+</div>
 </div>
 
 <div class="card">
-<h2>Istoric</h2>
-<div id="istoric"></div>
-
-<button class="clear" onclick="stergeIstoric()">
-Șterge Istoric
-</button>
+<h2>⚙️ Setări Tarife</h2>
+<label>ADMIRA (Lei/kWh)</label>
+<input id="tarif1" type="number" step="0.01" onchange="saveTarife()">
+<label>BERGHOUSE (Lei/kWh)</label>
+<input id="tarif2" type="number" step="0.01" onchange="saveTarife()">
 </div>
 
+<div class="grid">
+
+<div class="card">
+<h2>ADMIRA DISTRIBURION SRL</h2>
+<label>Data citire</label>
+<input id="data1" type="date">
+<label>Index contor</label>
+<input id="index1" type="number">
+<button onclick="addReading('admira')">Salvează citire</button>
+<div id="admiraLast"></div>
+<div id="admiraHistory"></div>
+</div>
+
+<div class="card">
+<h2>BERGHOUSE SRL</h2>
+<label>Data citire</label>
+<input id="data2" type="date">
+<label>Index contor</label>
+<input id="index2" type="number">
+<button onclick="addReading('berg')">Salvează citire</button>
+<div id="bergLast"></div>
+<div id="bergHistory"></div>
+</div>
+
+</div>
 </div>
 
 <script>
+function get(k){return JSON.parse(localStorage.getItem(k)||"[]")}
+function set(k,v){localStorage.setItem(k,JSON.stringify(v))}
 
-incarcaIstoric();
-
-function calculeaza(){
-
-let vechi=parseFloat(document.getElementById("vechi").value);
-let nou=parseFloat(document.getElementById("nou").value);
-let pret=parseFloat(document.getElementById("pret").value);
-
-let d1=new Date(document.getElementById("dataVeche").value);
-let d2=new Date(document.getElementById("dataNoua").value);
-
-if(isNaN(vechi)||isNaN(nou)){
-alert("Completează toate câmpurile.");
-return;
+function saveTarife(){
+ localStorage.setItem("tarif1",document.getElementById("tarif1").value);
+ localStorage.setItem("tarif2",document.getElementById("tarif2").value);
+ render();
 }
 
-if(nou<vechi){
-alert("Indexul nou trebuie să fie mai mare.");
-return;
+function addReading(type){
+ let idx=parseFloat(document.getElementById(type==="admira"?"index1":"index2").value);
+ let dt=document.getElementById(type==="admira"?"data1":"data2").value;
+
+ if(!dt || isNaN(idx)){alert("Completează toate câmpurile");return;}
+
+ let arr=get(type);
+
+ if(arr.length && idx<=arr[arr.length-1].index){
+   alert("Indexul trebuie să fie mai mare decât ultima citire.");
+   return;
+ }
+
+ arr.push({date:dt,index:idx});
+ set(type,arr);
+ render();
 }
 
-let consum=nou-vechi;
-
-let zile=Math.round(
-(d2-d1)/(1000*60*60*24)
-);
-
-if(zile<=0){
-alert("Perioadă invalidă.");
-return;
+function monthName(d){
+ const m=["Ianuarie","Februarie","Martie","Aprilie","Mai","Iunie","Iulie","August","Septembrie","Octombrie","Noiembrie","Decembrie"];
+ let x=new Date(d);
+ return m[x.getMonth()]+" "+x.getFullYear();
 }
 
-let medie=consum/zile;
-let estimare=medie*30;
-let cost=consum*pret;
+function renderFirm(type,history,lastBox,tarif){
+ let arr=get(type);
+ let tarifVal=parseFloat(localStorage.getItem(tarif)||0);
 
-document.getElementById("rezultat").innerHTML=`
-<div>Consum total:
-<span class="value">${consum.toFixed(2)} kWh</span></div>
+ let totalKwh=0,totalLei=0,lastKwh=0,lastLei=0;
+ let html="";
 
-<div>Zile:
-<span class="value">${zile}</span></div>
+ for(let i=1;i<arr.length;i++){
+   let consum=arr[i].index-arr[i-1].index;
+   let cost=consum*tarifVal;
 
-<div>Consum/zi:
-<span class="value">${medie.toFixed(2)} kWh</span></div>
+   totalKwh+=consum;
+   totalLei+=cost;
 
-<div>Estimare lunară:
-<span class="value">${estimare.toFixed(2)} kWh</span></div>
+   lastKwh=consum;
+   lastLei=cost;
 
-<div>Cost estimat:
-<span class="value">${cost.toFixed(2)} Lei</span></div>
-`;
+   html+=`
+   <div class="hist">
+   <b>${monthName(arr[i].date)}</b><br>
+   Consum: ${consum.toFixed(2)} kWh<br>
+   Cost: ${cost.toFixed(2)} Lei
+   <details>
+   <summary>Detalii</summary>
+   Index vechi: ${arr[i-1].index}<br>
+   Index nou: ${arr[i].index}
+   </details>
+   </div>`;
+ }
 
-salveazaIstoric(consum,cost,zile);
+ document.getElementById(history).innerHTML=html;
+
+ if(lastKwh>0){
+  document.getElementById(lastBox).innerHTML=`
+  <div class="hist">
+  <b>Ultimul consum</b><br>
+  ${lastKwh.toFixed(2)} kWh<br>
+  ${lastLei.toFixed(2)} Lei
+  </div>`;
+ }
+
+ return {kwh:totalKwh,lei:totalLei,last:arr.length?arr[arr.length-1].date:"-"};
 }
 
-function salveazaIstoric(consum,cost,zile){
+function render(){
+ document.getElementById("tarif1").value=localStorage.getItem("tarif1")||"";
+ document.getElementById("tarif2").value=localStorage.getItem("tarif2")||"";
 
-let data={
-data:new Date().toLocaleDateString(),
-consum:consum.toFixed(2),
-cost:cost.toFixed(2),
-zile:zile
-};
+ let a=renderFirm("admira","admiraHistory","admiraLast","tarif1");
+ let b=renderFirm("berg","bergHistory","bergLast","tarif2");
 
-let istoric=
-JSON.parse(localStorage.getItem("istoricConsum"))
-||[];
+ document.getElementById("admiraKwh").innerText=a.kwh.toFixed(2)+" kWh";
+ document.getElementById("bergKwh").innerText=b.kwh.toFixed(2)+" kWh";
+ document.getElementById("totalKwh").innerText=(a.kwh+b.kwh).toFixed(2)+" kWh";
 
-istoric.unshift(data);
+ document.getElementById("admiraLei").innerText=a.lei.toFixed(2)+" Lei";
+ document.getElementById("bergLei").innerText=b.lei.toFixed(2)+" Lei";
+ document.getElementById("totalLei").innerText=(a.lei+b.lei).toFixed(2)+" Lei";
 
-localStorage.setItem(
-"istoricConsum",
-JSON.stringify(istoric)
-);
-
-incarcaIstoric();
+ let last=a.last>b.last?a.last:b.last;
+ document.getElementById("lastUpdate").innerText=last||"-";
 }
-
-function incarcaIstoric(){
-
-let istoric=
-JSON.parse(localStorage.getItem("istoricConsum"))
-||[];
-
-let html="";
-
-istoric.forEach(item=>{
-
-html+=`
-<div class="history-item">
-📅 ${item.data}<br>
-⚡ ${item.consum} kWh<br>
-💰 ${item.cost} Lei
-</div>
-`;
-
-});
-
-document.getElementById("istoric").innerHTML=
-html || "Nu există înregistrări.";
-}
-
-function stergeIstoric(){
-
-if(confirm("Ștergi istoricul?")){
-
-localStorage.removeItem("istoricConsum");
-incarcaIstoric();
-
-}
-}
-
-async function shareApp(){
-
-if(navigator.share){
-
-navigator.share({
-title:"Calculator Energie",
-text:"Calculează rapid consumul de energie."
-});
-
-}else{
-
-alert("Browserul nu suportă distribuirea directă.");
-
-}
-}
+render();
 </script>
-
 </body>
 </html>
