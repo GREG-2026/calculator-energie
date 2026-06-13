@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Energy Calculator Pro</title>
+
+<style>
+:root{
+--bg:#0f172a;
+--card:#1e293b;
+--accent:#22c55e;
+--text:#ffffff;
+--input:#334155;
+}
+
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+font-family:Segoe UI,sans-serif;
+}
+
+body{
+background:linear-gradient(135deg,#0f172a,#1e293b);
+color:var(--text);
+padding:20px;
+min-height:100vh;
+}
+
+.container{
+max-width:650px;
+margin:auto;
+}
+
+.card{
+background:rgba(255,255,255,0.08);
+backdrop-filter:blur(15px);
+border-radius:20px;
+padding:20px;
+margin-bottom:15px;
+box-shadow:0 10px 30px rgba(0,0,0,.3);
+}
+
+h1{
+text-align:center;
+margin-bottom:20px;
+font-size:28px;
+}
+
+label{
+display:block;
+margin-top:12px;
+margin-bottom:5px;
+font-weight:600;
+}
+
+input{
+width:100%;
+padding:12px;
+border:none;
+border-radius:12px;
+background:var(--input);
+color:white;
+font-size:16px;
+}
+
+button{
+width:100%;
+padding:14px;
+margin-top:15px;
+border:none;
+border-radius:12px;
+font-size:16px;
+font-weight:bold;
+cursor:pointer;
+}
+
+.calc{
+background:var(--accent);
+color:black;
+}
+
+.share{
+background:#3b82f6;
+color:white;
+}
+
+.clear{
+background:#ef4444;
+color:white;
+}
+
+.result{
+margin-top:15px;
+font-size:18px;
+line-height:1.8;
+}
+
+.value{
+color:#4ade80;
+font-weight:bold;
+}
+
+.history-item{
+background:#334155;
+padding:10px;
+border-radius:10px;
+margin-top:10px;
+font-size:14px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<div class="card">
+<h1>⚡ Calculator Energie</h1>
+
+<label>Data citire veche</label>
+<input type="date" id="dataVeche">
+
+<label>Index vechi (kWh)</label>
+<input type="number" id="vechi">
+
+<label>Data citire nouă</label>
+<input type="date" id="dataNoua">
+
+<label>Index nou (kWh)</label>
+<input type="number" id="nou">
+
+<label>Preț energie (Lei/kWh)</label>
+<input type="number" id="pret" value="1.3" step="0.01">
+
+<button class="calc" onclick="calculeaza()">
+Calculează
+</button>
+
+<div id="rezultat" class="result"></div>
+
+<button class="share" onclick="shareApp()">
+Distribuie aplicația
+</button>
+
+</div>
+
+<div class="card">
+<h2>Istoric</h2>
+<div id="istoric"></div>
+
+<button class="clear" onclick="stergeIstoric()">
+Șterge Istoric
+</button>
+</div>
+
+</div>
+
+<script>
+
+incarcaIstoric();
+
+function calculeaza(){
+
+let vechi=parseFloat(document.getElementById("vechi").value);
+let nou=parseFloat(document.getElementById("nou").value);
+let pret=parseFloat(document.getElementById("pret").value);
+
+let d1=new Date(document.getElementById("dataVeche").value);
+let d2=new Date(document.getElementById("dataNoua").value);
+
+if(isNaN(vechi)||isNaN(nou)){
+alert("Completează toate câmpurile.");
+return;
+}
+
+if(nou<vechi){
+alert("Indexul nou trebuie să fie mai mare.");
+return;
+}
+
+let consum=nou-vechi;
+
+let zile=Math.round(
+(d2-d1)/(1000*60*60*24)
+);
+
+if(zile<=0){
+alert("Perioadă invalidă.");
+return;
+}
+
+let medie=consum/zile;
+let estimare=medie*30;
+let cost=consum*pret;
+
+document.getElementById("rezultat").innerHTML=`
+<div>Consum total:
+<span class="value">${consum.toFixed(2)} kWh</span></div>
+
+<div>Zile:
+<span class="value">${zile}</span></div>
+
+<div>Consum/zi:
+<span class="value">${medie.toFixed(2)} kWh</span></div>
+
+<div>Estimare lunară:
+<span class="value">${estimare.toFixed(2)} kWh</span></div>
+
+<div>Cost estimat:
+<span class="value">${cost.toFixed(2)} Lei</span></div>
+`;
+
+salveazaIstoric(consum,cost,zile);
+}
+
+function salveazaIstoric(consum,cost,zile){
+
+let data={
+data:new Date().toLocaleDateString(),
+consum:consum.toFixed(2),
+cost:cost.toFixed(2),
+zile:zile
+};
+
+let istoric=
+JSON.parse(localStorage.getItem("istoricConsum"))
+||[];
+
+istoric.unshift(data);
+
+localStorage.setItem(
+"istoricConsum",
+JSON.stringify(istoric)
+);
+
+incarcaIstoric();
+}
+
+function incarcaIstoric(){
+
+let istoric=
+JSON.parse(localStorage.getItem("istoricConsum"))
+||[];
+
+let html="";
+
+istoric.forEach(item=>{
+
+html+=`
+<div class="history-item">
+📅 ${item.data}<br>
+⚡ ${item.consum} kWh<br>
+💰 ${item.cost} Lei
+</div>
+`;
+
+});
+
+document.getElementById("istoric").innerHTML=
+html || "Nu există înregistrări.";
+}
+
+function stergeIstoric(){
+
+if(confirm("Ștergi istoricul?")){
+
+localStorage.removeItem("istoricConsum");
+incarcaIstoric();
+
+}
+}
+
+async function shareApp(){
+
+if(navigator.share){
+
+navigator.share({
+title:"Calculator Energie",
+text:"Calculează rapid consumul de energie."
+});
+
+}else{
+
+alert("Browserul nu suportă distribuirea directă.");
+
+}
+}
+</script>
+
+</body>
+</html>
