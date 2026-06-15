@@ -2,184 +2,493 @@
 <html lang="ro">
 <head>
 <meta charset="UTF-8">
+<link rel="icon" href="data:,">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Monitor Energie PRO v2.1</title>
+<title>Monitor Energie PRO v2.6</title>
 <style>
-body{margin:0;font-family:Arial;background:#0f172a;color:#fff}
-.header{padding:18px;text-align:center;font-size:28px;font-weight:bold;background:#111827}
+body{margin:0;font-family:Arial;background:#1e4d38;color:#faf9f9}
+.header{padding:18px;text-align:center;font-size:28px;font-weight:bold;background:#1e4d38;}
 .wrap{max-width:1100px;margin:auto;padding:15px}
-.card{background:#1e293b;border-radius:18px;padding:18px;margin-bottom:15px}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px}
+.card{background:#406B58;border-radius:18px;padding:18px;margin-bottom:15px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px}
 input,button{width:100%;padding:12px;border:none;border-radius:10px;box-sizing:border-box;margin-top:6px}
-input{background:#f8fafc}
-button{background:#22c55e;font-weight:bold}
-.stat{font-size:30px;color:#22c55e;font-weight:bold}
-.small{color:#cbd5e1}
-.hist{background:#334155;padding:10px;border-radius:10px;margin-top:8px}
-details{margin-top:8px}
+button{background:#31bd4f;font-weight:bold}
+.danger{background:#f1b1b1}
+.hist{background:#373d3d00;padding:10px;border-radius:10px;margin-top:8px}
+.stat{font-size:28px;color:#ffffff;font-weight:bold}
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<script>
+let db={admira:[],berg:[],t1:"",t2:""};
+
+async function loadDB(){
+ const r=await fetch('/api/data');
+ db=await r.json();
+}
+
+async function saveDB(){
+ await fetch('/api/data',{
+   method:'POST',
+   headers:{'Content-Type':'application/json'},
+   body:JSON.stringify(db)
+ });
+}
+
+function lsGet(k){
+ if(k==='t1' || k==='t2') return db[k]||'';
+ return JSON.stringify(db[k]||[]);
+}
+
+function lsSet(k,v){
+ if(k==='t1' || k==='t2'){
+   db[k]=v;
+ }else{
+   try{ db[k]=JSON.parse(v); }catch(e){}
+ }
+ saveDB();
+}
+
+function lsRemove(k){ db[k]=[]; saveDB(); }
+function lsClear(){ db={admira:[],berg:[],t1:'',t2:''}; saveDB(); }
+
+window.localStorage={
+ getItem:lsGet,
+ setItem:lsSet,
+ removeItem:lsRemove,
+ clear:lsClear
+};
+</script>
+
 </head>
 <body>
-<div class="header">⚡ Monitor Energie PRO v2.1</div>
-
+<div class="header">⚡ Monitor Energie PRO v2.6</div>
 <div class="wrap">
 
 <div class="card">
-<h2>📊 Dashboard General</h2>
-<div class="small">Ultima actualizare: <span id="lastUpdate">-</span></div><br>
+<h2>Dashboard</h2>
 <div class="grid">
 <div>
-<b>ADMIRA</b>
-<div class="stat" id="admiraKwh">0 kWh</div>
-<div id="admiraLei">0 Lei</div>
+  <b>ADMIRA</b>
+  <div class="stat" id="ak">0 kWh</div>
+  <div id="al">0 Lei</div>
 </div>
 
 <div>
-<b>BERGHOUSE</b>
-<div class="stat" id="bergKwh">0 kWh</div>
-<div id="bergLei">0 Lei</div>
+  <b>BERGHOUSE</b>
+  <div class="stat" id="bk">0 kWh</div>
+  <div id="bl">0 Lei</div>
 </div>
 
 <div>
-<b>TOTAL GENERAL</b>
-<div class="stat" id="totalKwh">0 kWh</div>
-<div id="totalLei">0 Lei</div>
-</div>
+  <b>TOTAL</b>
+  <div class="stat" id="tk">0 kWh</div>
+  <div id="tl">0 Lei</div>
 </div>
 </div>
 
 <div class="card">
-<h2>⚙️ Setări Tarife</h2>
-<label>ADMIRA (Lei/kWh)</label>
-<input id="tarif1" type="number" step="0.01" onchange="saveTarife()">
-<label>BERGHOUSE (Lei/kWh)</label>
-<input id="tarif2" type="number" step="0.01" onchange="saveTarife()">
+<h2>⚙️ Tarife</h2>
+<input id="t1" type="number" step="0.01" placeholder="Tarif ADMIRA">
+<input id="t2" type="number" step="0.01" placeholder="Tarif BERGHOUSE">
+<button onclick="saveTariffs()">Salvează tarife</button>
 </div>
 
 <div class="grid">
-
 <div class="card">
-<h2>ADMIRA DISTRIBURION SRL</h2>
-<label>Data citire</label>
-<input id="data1" type="date">
-<label>Index contor</label>
-<input id="index1" type="number">
-<button onclick="addReading('admira')">Salvează citire</button>
-<div id="admiraLast"></div>
-<div id="admiraHistory"></div>
+<h2>ADMIRA DISTRIBUTION SRL</h2>
+<input id="d1" type="date">
+<input id="i1" type="number" step="0.01" placeholder="Index contor">
+<button onclick="add('admira')">Salvează citire</button>
+<button onclick="editLast('admira')">
+✏️ Editează ultima citire
+</button>
+
+<button class="danger" onclick="deleteLast('admira')">
+🗑 Șterge ultima citire
+</button>
+
+<button class="danger" onclick="resetFirm('admira')">
+♻ Reset ADMIRA
+</button>
+<div id="aInfo"></div>
+<div id="aHist"></div>
 </div>
 
 <div class="card">
 <h2>BERGHOUSE SRL</h2>
-<label>Data citire</label>
-<input id="data2" type="date">
-<label>Index contor</label>
-<input id="index2" type="number">
-<button onclick="addReading('berg')">Salvează citire</button>
-<div id="bergLast"></div>
-<div id="bergHistory"></div>
+<input id="d2" type="date">
+<input id="i2" type="number" step="0.01" placeholder="Index contor">
+<button onclick="add('berg')">Salvează citire</button>
+<button onclick="editLast('berg')">
+✏️ Editează ultima citire
+</button>
+
+<button class="danger" onclick="deleteLast('berg')">
+🗑 Șterge ultima citire
+</button>
+
+<button class="danger" onclick="resetFirm('berg')">
+♻ Reset BERGHOUSE
+</button>
+<div id="bInfo"></div>
+<div id="bHist"></div>
+</div>
 </div>
 
-</div>
+
+<button onclick="exportPDF()">📄 Export PDF</button>
+<button onclick="exportBackup()">💾 Export Backup</button>
+
+<input type="file" id="backupFile" accept=".json"
+onchange="importBackup(event)" style="margin-top:10px;">
+
+<button class="danger" onclick="resetAll()">RESET TOTAL</button>
+
+
 </div>
 
 <script>
-function get(k){return JSON.parse(localStorage.getItem(k)||"[]")}
-function set(k,v){localStorage.setItem(k,JSON.stringify(v))}
+function g(k){return JSON.parse(localStorage.getItem(k)||"[]")}
+function s(k,v){localStorage.setItem(k,JSON.stringify(v))}
 
-function saveTarife(){
- localStorage.setItem("tarif1",document.getElementById("tarif1").value);
- localStorage.setItem("tarif2",document.getElementById("tarif2").value);
+function saveTariffs(){
+ localStorage.setItem("t1",document.getElementById("t1").value);
+ localStorage.setItem("t2",document.getElementById("t2").value);
  render();
 }
 
-function addReading(type){
- let idx=parseFloat(document.getElementById(type==="admira"?"index1":"index2").value);
- let dt=document.getElementById(type==="admira"?"data1":"data2").value;
-
- if(!dt || isNaN(idx)){alert("Completează toate câmpurile");return;}
-
- let arr=get(type);
-
+function add(type){
+ let date=document.getElementById(type==="admira"?"d1":"d2").value;
+ let idx=parseFloat(document.getElementById(type==="admira"?"i1":"i2").value);
+ if(!date||isNaN(idx)){alert("Completează toate câmpurile");return;}
+ let arr=g(type);
  if(arr.length && idx<=arr[arr.length-1].index){
    alert("Indexul trebuie să fie mai mare decât ultima citire.");
    return;
  }
-
- arr.push({date:dt,index:idx});
- set(type,arr);
+ arr.push({date,index:idx});
+ s(type,arr);
  render();
 }
 
-function monthName(d){
- const m=["Ianuarie","Februarie","Martie","Aprilie","Mai","Iunie","Iulie","August","Septembrie","Octombrie","Noiembrie","Decembrie"];
- let x=new Date(d);
- return m[x.getMonth()]+" "+x.getFullYear();
+function deleteLast(type){
+ let arr=g(type);
+ if(!arr.length)return;
+ if(confirm("Ștergi ultima citire?")){
+   arr.pop();
+   s(type,arr);
+   render();
+ }
+}
+function resetFirm(type){
+
+  if(!confirm("Ștergi toate citirile pentru această firmă?")){
+    return;
+  }
+
+  localStorage.removeItem(type);
+
+  render();
+
+  alert("Datele firmei au fost șterse.");
+
+}
+function editLast(type){
+  let arr=g(type);
+
+  if(!arr.length){
+    alert("Nu există citiri.");
+    return;
+  }
+
+  let last=arr[arr.length-1];
+
+  let newDate=prompt(
+    "Data citirii:",
+    last.date
+  );
+
+  if(newDate===null)return;
+
+  let newIndex=prompt(
+    "Index nou:",
+    last.index
+  );
+
+  if(newIndex===null)return;
+
+  newIndex=parseFloat(newIndex);
+
+  if(isNaN(newIndex)){
+    alert("Index invalid.");
+    return;
+  }
+
+  last.date=newDate;
+  last.index=newIndex;
+
+  s(type,arr);
+  render();
+
+  alert("Citirea a fost actualizată.");
+}
+function resetAll(){
+ if(confirm("Ștergi toate datele?")){
+   localStorage.clear();
+   render();
+ }
 }
 
-function renderFirm(type,history,lastBox,tarif){
- let arr=get(type);
- let tarifVal=parseFloat(localStorage.getItem(tarif)||0);
 
- let totalKwh=0,totalLei=0,lastKwh=0,lastLei=0;
+function renderFirm(type,infoId,histId,tarifKey){
+
+ let arr=g(type);
+ let tarif=parseFloat(localStorage.getItem(tarifKey)||0);
+
+ let total=0;
+ let totalLei=0;
  let html="";
 
+ if(arr.length){
+
+   let first=arr[0];
+   let last=arr[arr.length-1];
+
+   document.getElementById(infoId).innerHTML=`
+   <div class="hist">
+   <b>Prima citire</b><br>
+   ${first.date} → ${first.index}<br><br>
+   <b>Ultima citire</b><br>
+   ${last.date} → ${last.index}
+   </div>`;
+ }else{
+   document.getElementById(infoId).innerHTML="";
+ }
+
  for(let i=1;i<arr.length;i++){
-   let consum=arr[i].index-arr[i-1].index;
-   let cost=consum*tarifVal;
 
-   totalKwh+=consum;
+   let c=arr[i].index-arr[i-1].index;
+   total+=c;
+
+   let cost=c*tarif;
    totalLei+=cost;
-
-   lastKwh=consum;
-   lastLei=cost;
 
    html+=`
    <div class="hist">
-   <b>${monthName(arr[i].date)}</b><br>
-   Consum: ${consum.toFixed(2)} kWh<br>
+   <b>${arr[i-1].date} ➜ ${arr[i].date}</b><br>
+   Consum: ${c.toFixed(2)} kWh<br>
    Cost: ${cost.toFixed(2)} Lei
    <details>
    <summary>Detalii</summary>
-   Index vechi: ${arr[i-1].index}<br>
+   Data index vechi: ${arr[i-1].date}<br>
+   Index vechi: ${arr[i-1].index}<br><br>
+   Data index nou: ${arr[i].date}<br>
    Index nou: ${arr[i].index}
    </details>
    </div>`;
  }
 
- document.getElementById(history).innerHTML=html;
+ document.getElementById(histId).innerHTML=html;
 
- if(lastKwh>0){
-  document.getElementById(lastBox).innerHTML=`
-  <div class="hist">
-  <b>Ultimul consum</b><br>
-  ${lastKwh.toFixed(2)} kWh<br>
-  ${lastLei.toFixed(2)} Lei
-  </div>`;
- }
-
- return {kwh:totalKwh,lei:totalLei,last:arr.length?arr[arr.length-1].date:"-"};
+ return {
+   kwh: total,
+   lei: totalLei
+ };
 }
+
+
+
+function exportPDF(){
+
+ const { jsPDF } = window.jspdf;
+ const doc = new jsPDF();
+
+ let y = 15;
+
+ doc.setFontSize(18);
+ doc.text("Raport Consum Energie Electrica",10,y);
+
+ y += 8;
+
+ doc.setFontSize(10);
+ doc.text("Generat: " + new Date().toLocaleString(),10,y);
+
+ y += 15;
+
+ let totalGeneralKwh = 0;
+ let totalGeneralLei = 0;
+
+ [
+   ["ADMIRA DISTRIBUTION SRL","admira","t1"],
+   ["BERGHOUSE SRL","berg","t2"]
+ ].forEach(f=>{
+
+   const nume=f[0];
+   const arr=g(f[1]);
+   const tarif=parseFloat(localStorage.getItem(f[2])||0);
+
+   let totalKwh=0;
+   let totalLei=0;
+
+   doc.setFontSize(14);
+   doc.text(nume,10,y);
+   y += 8;
+
+   doc.setFontSize(10);
+
+   doc.rect(10,y,90,8);
+   doc.rect(100,y,40,8);
+   doc.rect(140,y,40,8);
+
+   doc.text("Perioada",12,y+5);
+   doc.text("Consum kWh",105,y+5);
+   doc.text("Cost Lei",145,y+5);
+
+   y += 8;
+
+   for(let i=1;i<arr.length;i++){
+
+      let consum = arr[i].index-arr[i-1].index;
+      let cost = consum * tarif;
+
+      totalKwh += consum;
+      totalLei += cost;
+
+      doc.rect(10,y,90,8);
+      doc.rect(100,y,40,8);
+      doc.rect(140,y,40,8);
+
+      doc.text(arr[i-1].date+" - "+arr[i].date,12,y+5);
+      doc.text(consum.toFixed(2),105,y+5);
+      doc.text(cost.toFixed(2),145,y+5);
+
+      y += 8;
+
+      if(y>250){
+         doc.addPage();
+         y=15;
+      }
+   }
+
+  doc.setFontSize(11);
+
+doc.text("Total "+nume+":",10,y+8);
+
+doc.text(totalKwh.toFixed(2)+" kWh",110,y+8);
+
+doc.text(totalLei.toFixed(2)+" Lei",165,y+8);
+
+   y += 18;
+
+   totalGeneralKwh += totalKwh;
+   totalGeneralLei += totalLei;
+ });
+
+ doc.setFontSize(14);
+ doc.text("RECAPITULARE GENERALA",10,y);
+
+ y += 10;
+
+ doc.setFontSize(11);
+ doc.text("Consum total: "+totalGeneralKwh.toFixed(2)+" kWh",10,y);
+ y += 7;
+ doc.text("Cost total: "+totalGeneralLei.toFixed(2)+" Lei",10,y);
+
+ y += 12;
+ doc.setFontSize(9);
+ doc.text("Raport generat automat de Monitor Energie PRO Greg",10,y);
+
+ doc.save("Raport_Consum_Energie.pdf");
+}
+
+
+function exportBackup(){
+
+ const data={
+   admira:g("admira"),
+   berg:g("berg"),
+   t1:localStorage.getItem("t1")||"",
+   t2:localStorage.getItem("t2")||""
+ };
+
+ const blob=new Blob(
+   [JSON.stringify(data,null,2)],
+   {type:"application/json"}
+ );
+
+ const a=document.createElement("a");
+ a.href=URL.createObjectURL(blob);
+ a.download="Monitor_Energie_Backup.json";
+ a.click();
+}
+
+function importBackup(event){
+
+ const file=event.target.files[0];
+
+ if(!file)return;
+
+ const reader=new FileReader();
+
+ reader.onload=function(e){
+
+   try{
+
+     const data=JSON.parse(e.target.result);
+
+     localStorage.setItem(
+       "admira",
+       JSON.stringify(data.admira||[])
+     );
+
+     localStorage.setItem(
+       "berg",
+       JSON.stringify(data.berg||[])
+     );
+
+     localStorage.setItem(
+       "t1",
+       data.t1||""
+     );
+
+     localStorage.setItem(
+       "t2",
+       data.t2||""
+     );
+
+     render();
+
+     alert("Backup restaurat cu succes.");
+
+   }catch(err){
+
+     alert("Fișier backup invalid.");
+
+   }
+
+ };
+
+ reader.readAsText(file);
+}
+
 
 function render(){
- document.getElementById("tarif1").value=localStorage.getItem("tarif1")||"";
- document.getElementById("tarif2").value=localStorage.getItem("tarif2")||"";
+ document.getElementById("t1").value=localStorage.getItem("t1")||"";
+ document.getElementById("t2").value=localStorage.getItem("t2")||"";
 
- let a=renderFirm("admira","admiraHistory","admiraLast","tarif1");
- let b=renderFirm("berg","bergHistory","bergLast","tarif2");
+ let a=renderFirm("admira","aInfo","aHist","t1");
+ let b=renderFirm("berg","bInfo","bHist","t2");
 
- document.getElementById("admiraKwh").innerText=a.kwh.toFixed(2)+" kWh";
- document.getElementById("bergKwh").innerText=b.kwh.toFixed(2)+" kWh";
- document.getElementById("totalKwh").innerText=(a.kwh+b.kwh).toFixed(2)+" kWh";
+document.getElementById("ak").innerText=a.kwh.toFixed(2)+" kWh";
+document.getElementById("bk").innerText=b.kwh.toFixed(2)+" kWh";
+document.getElementById("tk").innerText=(a.kwh+b.kwh).toFixed(2)+" kWh";
 
- document.getElementById("admiraLei").innerText=a.lei.toFixed(2)+" Lei";
- document.getElementById("bergLei").innerText=b.lei.toFixed(2)+" Lei";
- document.getElementById("totalLei").innerText=(a.lei+b.lei).toFixed(2)+" Lei";
-
- let last=a.last>b.last?a.last:b.last;
- document.getElementById("lastUpdate").innerText=last||"-";
+document.getElementById("al").innerText=a.lei.toFixed(2)+" Lei";
+document.getElementById("bl").innerText=b.lei.toFixed(2)+" Lei";
+document.getElementById("tl").innerText=(a.lei+b.lei).toFixed(2)+" Lei";
 }
-render();
+loadDB().then(()=>render());
 </script>
 </body>
 </html>
